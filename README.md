@@ -36,7 +36,7 @@ developing.
 
 ```bash
 # 1. Install llama-server
-curl -fsSL https://llama.app/install.sh | bash
+curl -LsSf https://llama.app/install.sh | bash
 
 # 2. Start it
 llama-server
