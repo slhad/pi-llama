@@ -1,8 +1,20 @@
+/**
+ * llama.cpp provider for pi.
+ *
+ * Auto-discovers models from a running `llama-server` and
+ * registers them under the `llama-cpp` provider.
+ *
+ * Usage: `pi install github.com/huggingface/pi-llama`
+ */
+
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { Compile } from "typebox/compile";
 
+const PROVIDER_ID = "llama-cpp";
 const DEFAULT_BASE_URL = "http://localhost:8080/v1";
+// Fallback for /v1/models entries missing meta.n_ctx.
+const DEFAULT_CONTEXT_WINDOW = 8192;
 const PROPS_TIMEOUT_MS = 120_000;
 
 const ModelsResponseSchema = Type.Object({
@@ -73,7 +85,8 @@ export default async function (pi: ExtensionAPI) {
 		},
 	});
 
-	const baseUrl = (process?.env?.LLAMA_BASE_URL ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
+	const baseUrl = (process.env.LLAMA_BASE_URL ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
+	const apiKey = process.env.LLAMA_API_KEY ?? "no-key";
 
 	async function refreshProvider(): Promise<void> {
 		try {
@@ -105,15 +118,17 @@ export default async function (pi: ExtensionAPI) {
 					suffixes.push("(image)");
 				}
 				if (isLoaded) {
-					suffixes.push("(loaded ✅)");
+					suffixes.push("(loaded)");
 				}
 				return {
 					id: model.id,
 					name: suffixes.length > 0 ? `${model.id} ${suffixes.join(" ")}` : model.id,
 					input,
 					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-					contextWindow: model.meta?.n_ctx ?? previousById.get(model.id)?.contextWindow ?? 0,
-					// maxTokens: -1,
+					contextWindow:
+						model.meta?.n_ctx ??
+						previousById.get(model.id)?.contextWindow ??
+						DEFAULT_CONTEXT_WINDOW,
 				} as LlamaModel;
 			});
 
@@ -122,10 +137,10 @@ export default async function (pi: ExtensionAPI) {
 				return;
 			}
 
-			pi.registerProvider("llama-cpp", {
+			pi.registerProvider(PROVIDER_ID, {
 				name: "llama.cpp",
 				baseUrl,
-				apiKey: "LLAMA_API_KEY",
+				apiKey,
 				api: "openai-completions",
 				models: currentModels,
 			});
@@ -169,10 +184,10 @@ export default async function (pi: ExtensionAPI) {
 			if (typeof nCtx === "number" && nCtx > 0) {
 				model.contextWindow = nCtx;
 				discoveredContext.add(modelId);
-				pi.registerProvider("llama-cpp", {
+				pi.registerProvider(PROVIDER_ID, {
 					name: "llama.cpp",
 					baseUrl,
-					apiKey: "LLAMA_API_KEY",
+					apiKey,
 					api: "openai-completions",
 					models: currentModels,
 				});
@@ -198,7 +213,7 @@ export default async function (pi: ExtensionAPI) {
 	});
 
 	pi.on("model_select", (event, ctx) => {
-		if (event.model.provider !== "llama-cpp") {
+		if (event.model.provider !== PROVIDER_ID) {
 			return;
 		}
 		void discoverContextWindow(event.model.id, ctx);
