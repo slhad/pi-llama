@@ -17,7 +17,7 @@ settings. Every future `pi` invocation auto-loads it.
 **From inside an interactive pi session:**
 
 ```
-!pi install github.com/huggingface/pi-llama
+!pi install https://github.com/huggingface/pi-llama
 ```
 
 Then run `/reload` (or restart pi) to load the extension.
