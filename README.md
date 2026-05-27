@@ -1,7 +1,7 @@
 # pi-llama
 
-llama.cpp Pi extension. Auto-discovers models from a running `llama-server` and
-registers them as the `llama-cpp` provider in pi.
+llama.cpp Pi extension. Auto-discovers models from a running llama.cpp server and
+registers them as the `llama-cpp` provider in [pi](https://pi.dev).
 
 ## Install
 
@@ -35,15 +35,15 @@ developing.
 ## Usage
 
 ```bash
-# 1. Install llama-server
+# 1. Install llama.cpp
 curl -LsSf https://llama.app/install.sh | bash
 
-# 2. Start it
+# 2. Start the server
 llama serve
 
 # 3. Launch pi in another terminal
 pi
 
-# 4. Inside pi
-/model              # search "llama-cpp" to browse your local models
+# 4. Inside pi - search "llama-cpp" to browse your local models
+/model
 ```
