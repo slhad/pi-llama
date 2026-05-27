@@ -8,7 +8,7 @@ registers them as the `llama-cpp` provider in pi.
 **From the shell:**
 
 ```bash
-pi install https://github.com/huggingface/pi-llama
+pi install git:github.com/huggingface/pi-llama
 ```
 
 This clones to `~/.pi/agent/packages/pi-llama/` and adds an entry to your pi
@@ -17,7 +17,7 @@ settings. Every future `pi` invocation auto-loads it.
 **From inside an interactive pi session:**
 
 ```
-!pi install https://github.com/huggingface/pi-llama
+!pi install git:github.com/huggingface/pi-llama
 ```
 
 Then run `/reload` (or restart pi) to load the extension.
@@ -39,11 +39,11 @@ developing.
 curl -LsSf https://llama.app/install.sh | bash
 
 # 2. Start it
-llama-server
+llama serve
 
-# 3. Launch pi
+# 3. Launch pi in another terminal
 pi
 
 # 4. Inside pi
-/model              # pick llama-cpp/<id>
+/model              # search "llama-cpp" to browse your local models
 ```
