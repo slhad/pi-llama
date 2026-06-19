@@ -15,6 +15,10 @@ const PROVIDER_ID = "llama-cpp";
 const DEFAULT_BASE_URL = "http://localhost:8080/v1";
 // Fallback for /v1/models entries missing meta.n_ctx.
 const DEFAULT_CONTEXT_WINDOW = 8192;
+// llama.cpp has no output-token cap (no endpoint reports one; generation is only
+// bounded by the context window), so use Pi's own default for models that omit
+// maxTokens (see model-registry.ts parseModels).
+const DEFAULT_MAX_TOKENS = 16384;
 const PROPS_TIMEOUT_MS = 120_000;
 
 const ModelsResponseSchema = Type.Object({
@@ -106,6 +110,8 @@ type MutableDiscoveredModel = {
 	reasoning: boolean;
 	thinkingLevelMap?: LlamaModel["thinkingLevelMap"];
 	compat?: LlamaModel["compat"];
+	contextWindow: number;
+	maxTokens: number;
 };
 
 // Mark a model as using llama.cpp's chat_template_kwargs.enable_thinking control.
@@ -268,6 +274,7 @@ export default async function (pi: ExtensionAPI) {
 						capabilities: model.capabilities ?? listingCapabilitiesById.get(model.id),
 					});
 				discoveredCapabilitiesById.set(model.id, discoveredCapabilities);
+				const contextWindow = model.meta?.n_ctx ?? previous?.contextWindow ?? DEFAULT_CONTEXT_WINDOW;
 				return {
 					id: model.id,
 					name: buildModelName(model.id, input, isLoaded, discoveredCapabilities),
@@ -277,7 +284,8 @@ export default async function (pi: ExtensionAPI) {
 					thinkingLevelMap: previous?.thinkingLevelMap,
 					input,
 					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-					contextWindow: model.meta?.n_ctx ?? previous?.contextWindow ?? DEFAULT_CONTEXT_WINDOW,
+					contextWindow,
+					maxTokens: Math.min(DEFAULT_MAX_TOKENS, contextWindow),
 					compat: previous?.compat,
 				} as LlamaModel;
 			});
@@ -331,6 +339,8 @@ export default async function (pi: ExtensionAPI) {
 				selectedModel.reasoning = model.reasoning;
 				selectedModel.thinkingLevelMap = model.thinkingLevelMap;
 				selectedModel.compat = model.compat;
+				selectedModel.contextWindow = model.contextWindow;
+				selectedModel.maxTokens = model.maxTokens;
 			}
 			return;
 		}
@@ -385,12 +395,17 @@ export default async function (pi: ExtensionAPI) {
 			let loadedFooterStatus = autoload ? `[llama.cpp] ${modelId} loaded` : undefined;
 			if (typeof nCtx === "number" && nCtx > 0) {
 				model.contextWindow = nCtx;
+				model.maxTokens = Math.min(DEFAULT_MAX_TOKENS, nCtx);
 				model.name = buildModelName(model.id, model.input, true, discoveredCapabilitiesById.get(model.id));
 				if (selectedModel) {
 					selectedModel.name = model.name;
 				}
 				loadedFooterStatus = `[llama.cpp] ${modelId} loaded with ctx ${nCtx} tokens`;
 				updated = true;
+			}
+			if (selectedModel) {
+				selectedModel.contextWindow = model.contextWindow;
+				selectedModel.maxTokens = model.maxTokens;
 			}
 			if (data.chat_template?.includes("enable_thinking") === true) {
 				applyTemplateThinkingSupport(model);
