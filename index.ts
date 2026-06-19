@@ -103,7 +103,7 @@ const TEMPLATE_THINKING_LEVEL_MAP = {
 } satisfies NonNullable<LlamaModel["thinkingLevelMap"]>;
 
 // Minimal shape needed to update both registered models and Pi's active model snapshot.
-type MutableDiscoveredModel = {
+type MutableModelMetadata = {
 	id: string;
 	name: string;
 	input: LlamaModel["input"];
@@ -115,7 +115,7 @@ type MutableDiscoveredModel = {
 };
 
 // Mark a model as using llama.cpp's chat_template_kwargs.enable_thinking control.
-function applyTemplateThinkingSupport(model: MutableDiscoveredModel): void {
+function applyTemplateThinkingSupport(model: MutableModelMetadata): void {
 	model.reasoning = true;
 	model.thinkingLevelMap = TEMPLATE_THINKING_LEVEL_MAP;
 	model.compat = {
@@ -175,7 +175,7 @@ function getDiscoveredCapabilitiesFromListing(model: {
 }
 
 function applyPropsModalities(
-	model: MutableDiscoveredModel,
+	model: MutableModelMetadata,
 	isLoaded: boolean,
 	capabilities: DiscoveredCapabilities,
 	modalities?: { vision?: boolean; audio?: boolean; video?: boolean },
@@ -324,7 +324,7 @@ export default async function (pi: ExtensionAPI) {
 		ctx?: ExtensionCtx,
 		autoload = true,
 		timeoutMs = PROPS_TIMEOUT_MS,
-		selectedModel?: MutableDiscoveredModel,
+		selectedModel?: MutableModelMetadata,
 	): Promise<void> {
 		const model = currentModels.find((m) => m.id === modelId);
 		if (!model) {
